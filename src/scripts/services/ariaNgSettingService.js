@@ -41,10 +41,49 @@
             firstVisitCallbackFired = true;
         };
 
-        var isInsecureProtocolDisabled = function () {
-            var protocol = $location.protocol();
+        var isLocalOrLanHost = function (host) {
+            if (!host || typeof host !== 'string') {
+                return false;
+            }
 
-            return protocol === 'https';
+            var h = host.trim().toLowerCase();
+
+            if (h === 'localhost' || /(^|\.)localhost$/.test(h) || h === '::1' || h === '[::1]' || /(^|\.)local$/.test(h)) {
+                return true;
+            }
+
+            var ipv4Match = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+
+            if (ipv4Match) {
+                var a = parseInt(ipv4Match[1], 10);
+                var b = parseInt(ipv4Match[2], 10);
+                var c = parseInt(ipv4Match[3], 10);
+                var d = parseInt(ipv4Match[4], 10);
+
+                if (a <= 255 && b <= 255 && c <= 255 && d <= 255) {
+                    if (a === 127) { // 127.0.0.0/8 (Loopback)
+                        return true;
+                    }
+                    if (a === 10) { // 10.0.0.0/8 (Private)
+                        return true;
+                    }
+                    if (a === 172 && b >= 16 && b <= 31) { // 172.16.0.0/12 (Private)
+                        return true;
+                    }
+                    if (a === 192 && b === 168) { // 192.168.0.0/16 (Private)
+                        return true;
+                    }
+                    if (a === 169 && b === 254) { // 169.254.0.0/16 (Link-local)
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        };
+
+        var isInsecureProtocolDisabled = function () {
+            return false;
         };
 
         var getLanguageNameFromAlias = function (alias) {
@@ -204,7 +243,7 @@
         var initRpcSettingWithDefaultHostAndProtocol = function (setting) {
             setting.rpcHost = getDefaultRpcHost();
 
-            if (isInsecureProtocolDisabled()) {
+            if ($location.protocol() === 'https' && !isLocalOrLanHost(setting.rpcHost)) {
                 setting.protocol = ariaNgConstants.defaultSecureProtocol;
             }
         };
@@ -346,6 +385,9 @@
             },
             isInsecureProtocolDisabled: function () {
                 return isInsecureProtocolDisabled();
+            },
+            isLocalOrLanHost: function (host) {
+                return isLocalOrLanHost(host);
             },
             getLanguage: function () {
                 return getOption('language');
@@ -589,8 +631,24 @@
                     }
                 }
 
+                var protocolChanged = false;
+
+                if (field === 'rpcHost' && isLocalOrLanHost(value)) {
+                    if (setting.protocol === 'https') {
+                        setting.protocol = 'http';
+                        protocolChanged = true;
+                    } else if (setting.protocol === 'wss') {
+                        setting.protocol = 'ws';
+                        protocolChanged = true;
+                    }
+                }
+
                 if (setting.isDefault) {
                     setOption(field, value);
+
+                    if (protocolChanged) {
+                        setOption('protocol', setting.protocol);
+                    }
 
                     return setting;
                 } else {
@@ -603,6 +661,10 @@
                     for (var i = 0; i < options.extendRpcServers.length; i++) {
                         if (options.extendRpcServers[i].rpcId === setting.rpcId) {
                             options.extendRpcServers[i][field] = value;
+
+                            if (protocolChanged) {
+                                options.extendRpcServers[i]['protocol'] = setting.protocol;
+                            }
                             break;
                         }
                     }
