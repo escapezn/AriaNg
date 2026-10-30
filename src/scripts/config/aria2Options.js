@@ -838,6 +838,50 @@
             readonly: true,
             defaultValue: '0'
         },
+        'ed2k-server': {
+            type: 'string'
+        },
+        'ed2k-server-list': {
+            type: 'string',
+            readonly: true
+        },
+        'ed2k-node-list': {
+            type: 'string',
+            readonly: true
+        },
+        'ed2k-listen-port': {
+            type: 'integer',
+            defaultValue: '4662',
+            readonly: true,
+            min: 0,
+            max: 65535
+        },
+        'ed2k-udp-listen-port': {
+            type: 'integer',
+            defaultValue: '4672',
+            readonly: true,
+            min: 0,
+            max: 65535
+        },
+        'ed2k-port-mapping': {
+            type: 'boolean',
+            defaultValue: 'true',
+            readonly: true
+        },
+        'ed2k-upload-slots': {
+            type: 'integer',
+            defaultValue: '3',
+            min: 1
+        },
+        'ed2k-max-connections': {
+            type: 'integer',
+            defaultValue: '100',
+            min: 1
+        },
+        'ed2k-preview-priority': {
+            type: 'boolean',
+            defaultValue: 'false'
+        },
         'truncate-console-readout': {
             type: 'boolean',
             readonly: true,
@@ -876,6 +920,10 @@
             'dht-file-path', 'dht-file-path6', 'dht-listen-port', 'dht-message-timeout', 'enable-dht', 'enable-dht6',
             'enable-peer-exchange', 'follow-torrent', 'listen-port', 'max-overall-upload-limit', 'max-upload-limit',
             'peer-id-prefix', 'peer-agent', 'seed-ratio', 'seed-time'
+        ],
+        ed2kOptions: [
+            'ed2k-server', 'ed2k-server-list', 'ed2k-node-list', 'ed2k-listen-port', 'ed2k-udp-listen-port',
+            'ed2k-port-mapping', 'ed2k-upload-slots', 'ed2k-max-connections', 'ed2k-preview-priority'
         ],
         metalinkOptions: [
             'follow-metalink', 'metalink-base-uri', 'metalink-language', 'metalink-location', 'metalink-os',
@@ -1062,6 +1110,18 @@
             {
                 key: 'force-save',
                 category: 'global'
+            },
+            {
+                key: 'ed2k-preview-priority',
+                category: 'ed2k'
+            },
+            {
+                key: 'ed2k-max-connections',
+                category: 'ed2k'
+            },
+            {
+                key: 'ed2k-upload-slots',
+                category: 'ed2k'
             }
         ]
     });

@@ -18,6 +18,10 @@
             {
                 name: 'btpeers',
                 show: true
+            },
+            {
+                name: 'ed2k',
+                show: false
             }
         ];
         var downloadTaskRefreshPromise = null;
@@ -45,8 +49,8 @@
             }
         };
 
-        var getAvailableOptions = function (status, isBittorrent) {
-            var keys = aria2SettingService.getAvailableTaskOptionKeys(status, isBittorrent);
+        var getAvailableOptions = function (status, isBittorrent, isEd2k) {
+            var keys = aria2SettingService.getAvailableTaskOptionKeys(status, isBittorrent, isEd2k);
 
             return aria2SettingService.getSpecifiedOptions(keys, {
                 disableRequired: true
@@ -80,9 +84,14 @@
 
             setTabItemShow('pieces', $scope.context.showPiecesInfo);
             setTabItemShow('btpeers', task.status === 'active' && task.bittorrent);
+            setTabItemShow('ed2k', !!task.ed2k);
+
+            if ($scope.context.currentTab === 'ed2k' && !task.ed2k) {
+                $scope.changeTab('overview');
+            }
 
             if (!$scope.task || $scope.task.status !== task.status) {
-                $scope.context.availableOptions = getAvailableOptions(task.status, !!task.bittorrent);
+                $scope.context.availableOptions = getAvailableOptions(task.status, !!task.bittorrent, !!task.ed2k);
             }
 
             if ($scope.task) {

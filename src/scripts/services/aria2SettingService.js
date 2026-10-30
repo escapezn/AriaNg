@@ -38,6 +38,8 @@
                     return aria2GlobalAvailableOptions.ftpSFtpOptions;
                 } else if (type === 'bt') {
                     return aria2GlobalAvailableOptions.btOptions;
+                } else if (type === 'ed2k') {
+                    return aria2GlobalAvailableOptions.ed2kOptions;
                 } else if (type === 'metalink') {
                     return aria2GlobalAvailableOptions.metalinkOptions;
                 } else if (type === 'rpc') {
@@ -55,7 +57,7 @@
                     return false;
                 }
             },
-            getAvailableTaskOptionKeys: function (status, isBittorrent) {
+            getAvailableTaskOptionKeys: function (status, isBittorrent, isEd2k) {
                 var allOptions = aria2TaskAvailableOptions.taskOptions;
                 var availableOptions = [];
 
@@ -70,9 +72,11 @@
                         continue;
                     }
 
-                    if (option.category === 'http' && isBittorrent) {
+                    if (option.category === 'http' && (isBittorrent || isEd2k)) {
                         continue;
                     } else if (option.category === 'bittorrent' && !isBittorrent) {
+                        continue;
+                    } else if (option.category === 'ed2k' && !isEd2k) {
                         continue;
                     }
 

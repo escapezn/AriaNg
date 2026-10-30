@@ -75,7 +75,7 @@
                     </div>
                 </div>
                 <div class="col-md-2 col-sm-2 hidden-xs">
-                    <span class="task-download-speed" title="{{task.status === 'active' ? (('Download Speed' | translate) + ': ' + (task.downloadSpeed | readableVolume) + '/s') + (task.bittorrent ? ', ' + ('Upload Speed' | translate) + ': ' + (task.uploadSpeed | readableVolume) + '/s' : '') : ''}}"
+                    <span class="task-download-speed" title="{{task.status === 'active' ? (('Download Speed' | translate) + ': ' + (task.downloadSpeed | readableVolume) + '/s') + ((task.bittorrent || task.ed2k) ? ', ' + ('Upload Speed' | translate) + ': ' + (task.uploadSpeed | readableVolume) + '/s' : '') : ''}}"
                           ng-bind="(task.status === 'active' && !task.verifyIntegrityPending && !task.verifiedLength ? (!task.seeder || task.downloadSpeed > 0 ? (task.downloadSpeed | readableVolume) + '/s' : '-') : (task | taskStatus: true | translate: {errorcode: task.errorCode, verifiedPercent: task.verifiedPercent}))"></span>
                 </div>
                 <div class="task-right-arrow visible-md visible-lg">

@@ -13,6 +13,9 @@
             <li ng-class="{'active': context.currentTab === 'btpeers'}" ng-if="task && task.status === 'active' && task.bittorrent">
                 <a class="pointer-cursor" ng-click="changeTab('btpeers')" translate>Peers</a>
             </li>
+            <li ng-class="{'active': context.currentTab === 'ed2k'}" ng-if="task && task.ed2k">
+                <a class="pointer-cursor" ng-click="changeTab('ed2k')">ED2K / Kad</a>
+            </li>
             <li ng-class="{'active': context.currentTab === 'settings'}" ng-if="task && (task.status === 'active' || task.status === 'waiting' || task.status === 'paused')" class="slim">
                 <a class="pointer-cursor" ng-click="changeTab('settings')">
                     <i class="fa fa-gear"></i>
@@ -77,7 +80,7 @@
                             <span ng-bind="(task.completedLength | readableVolume) + (task.status === 'active' ? ' @ ' + (task.downloadSpeed | readableVolume) + '/s' : '')"></span>
                         </div>
                     </div>
-                    <div class="row" ng-if="task && task.bittorrent">
+                    <div class="row" ng-if="task && (task.bittorrent || task.ed2k)">
                         <div class="setting-key col-sm-4">
                             <span translate>Upload</span>
                         </div>
@@ -85,7 +88,7 @@
                             <span ng-bind="(task.uploadLength | readableVolume) + (task.status === 'active' ? ' @ ' + (task.uploadSpeed | readableVolume) + '/s' : '')"></span>
                         </div>
                     </div>
-                    <div class="row" ng-if="task && task.bittorrent">
+                    <div class="row" ng-if="task && (task.bittorrent || task.ed2k)">
                         <div class="setting-key col-sm-4">
                             <span translate>Share Ratio</span>
                         </div>
@@ -103,10 +106,10 @@
                     </div>
                     <div class="row" ng-if="task && task.status === 'active'">
                         <div class="setting-key col-sm-4">
-                            <span ng-bind="(task.bittorrent ? ('Seeders' | translate) + ' / ' : '') + ('Connections' | translate)">Connections</span>
+                            <span ng-bind="(task.bittorrent ? ('Seeders' | translate) + ' / ' : (task.ed2k ? ('Sources' | translate) + ' / ' : '')) + ('Connections' | translate)">Connections</span>
                         </div>
                         <div class="setting-value col-sm-8">
-                            <span ng-bind="(task.numSeeders ? (task.numSeeders + ' / ') : '') + task.connections"></span>
+                            <span ng-bind="(task.numSeeders ? (task.numSeeders + ' / ') : (task.ed2k && task.ed2k.peerCount ? (task.ed2k.peerCount + ' / ') : '')) + task.connections"></span>
                         </div>
                     </div>
                     <div class="row" ng-if="task && task.bittorrent && task.bittorrent.creationDate">
@@ -125,7 +128,31 @@
                             <span class="allow-word-break" ng-bind="task.infoHash"></span>
                         </div>
                     </div>
-                    <div class="row" ng-if="task && task.singleUrl">
+                    <div class="row" ng-if="task && task.ed2k && task.ed2k.hash">
+                        <div class="setting-key col-sm-4">
+                            <span translate>ED2K Hash</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="allow-word-break" ng-bind="task.ed2k.hash"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task && task.ed2k && task.ed2k.ed2kLink">
+                        <div class="setting-key col-sm-4">
+                            <span translate>ED2K Link</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="allow-word-break" ng-bind="task.ed2k.ed2kLink"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task && task.ed2k && task.ed2k.server">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Connected ED2K Server</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.serverName ? (task.ed2k.serverName + ' (' + task.ed2k.server + ')') : task.ed2k.server"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task && task.singleUrl && !task.ed2k">
                         <div class="setting-key col-sm-4">
                             <span translate>Download Url</span>
                         </div>
@@ -360,6 +387,235 @@
                             <div class="col-sm-12 text-center">
                                 <span translate>No connected peers</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane" ng-class="{'active': context.currentTab === 'ed2k'}" ng-if="task && task.ed2k">
+                <div class="settings-table striped hoverable">
+                    <div class="row no-hover">
+                        <div class="col-sm-12">
+                            <h4><i class="fa fa-server fa-fw"></i> <span translate>ED2K Server</span></h4>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Connection Status</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="label" ng-class="{'label-success': task.ed2k.connectedServerCount === '1' || task.ed2k.connectedServerCount === 1, 'label-default': task.ed2k.connectedServerCount !== '1' && task.ed2k.connectedServerCount !== 1}"
+                                  ng-bind="(task.ed2k.connectedServerCount === '1' || task.ed2k.connectedServerCount === 1 ? 'Connected' : 'Disconnected') | translate"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.server">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Server Address & Name</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.serverName ? (task.ed2k.serverName + ' (' + task.ed2k.server + ')') : task.ed2k.server"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.lowId !== undefined">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Server Client Status</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="label" ng-class="{'label-warning': task.ed2k.lowId, 'label-success': !task.ed2k.lowId}"
+                                  ng-bind="task.ed2k.lowId ? 'Low ID' : 'High ID'"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.serverUsers">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Server Users</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.serverUsers | number"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.serverFiles">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Server Files</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.serverFiles | number"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.serverCount">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Total Candidate Servers</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.serverCount"></span>
+                        </div>
+                    </div>
+
+                    <div class="row no-hover">
+                        <div class="col-sm-12">
+                            <h4><i class="fa fa-sitemap fa-fw"></i> <span translate>Kad Network</span></h4>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Kad Status</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="label" ng-class="{'label-warning': task.ed2k.kadFirewalled, 'label-success': !task.ed2k.kadFirewalled}"
+                                  ng-bind="(task.ed2k.kadFirewalled ? 'Firewalled' : 'Open') | translate"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Live Nodes</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.kadNodeCount ? (task.ed2k.kadNodeCount | number) : '0'"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Router Contacts</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.kadRouterCount ? (task.ed2k.kadRouterCount | number) : '0'"></span>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Observed External IPs</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.kadObservedAddressCount ? (task.ed2k.kadObservedAddressCount | number) : '0'"></span>
+                        </div>
+                    </div>
+
+                    <div class="row no-hover">
+                        <div class="col-sm-12">
+                            <h4><i class="fa fa-users fa-fw"></i> <span translate>Peer Sources</span></h4>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Peer Sources</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="label label-default" title="{{'Total Sources' | translate}}">
+                                <span translate>Total</span>: {{task.ed2k.peerCount || 0}}
+                            </span>
+                            &nbsp;
+                            <span class="label label-primary" title="{{'Accepted / Downloading' | translate}}">
+                                <span translate>Active</span>: {{task.ed2k.acceptedPeerCount || 0}}
+                            </span>
+                            &nbsp;
+                            <span class="label label-info" title="{{'Queued' | translate}}">
+                                <span translate>Queued</span>: {{task.ed2k.queuedPeerCount || 0}}
+                            </span>
+                            &nbsp;
+                            <span class="label label-warning" title="{{'Low ID' | translate}}">
+                                <span translate>Low ID</span>: {{task.ed2k.lowIdPeerCount || 0}}
+                            </span>
+                            &nbsp;
+                            <span class="label label-default" title="{{'Callback Waiting' | translate}}">
+                                <span translate>Callback</span>: {{task.ed2k.callbackWaitingPeerCount || 0}}
+                            </span>
+                            &nbsp;
+                            <span class="label label-danger" title="{{'Dead / No File' | translate}}">
+                                <span translate>Dead</span>: {{task.ed2k.deadPeerCount || 0}}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.peerCount && task.ed2k.peerCount > 0">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Peer Distribution</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <div class="progress" style="margin-bottom: 0;">
+                                <div class="progress-bar progress-bar-primary" role="progressbar" title="{{'Accepted / Downloading' | translate}}" ng-style="{width: (task.ed2k.acceptedPeerCount / task.ed2k.peerCount * 100) + '%'}"></div>
+                                <div class="progress-bar progress-bar-info" role="progressbar" title="{{'Queued' | translate}}" ng-style="{width: (task.ed2k.queuedPeerCount / task.ed2k.peerCount * 100) + '%'}"></div>
+                                <div class="progress-bar progress-bar-warning" role="progressbar" title="{{'Low ID' | translate}}" ng-style="{width: (task.ed2k.lowIdPeerCount / task.ed2k.peerCount * 100) + '%'}"></div>
+                                <div class="progress-bar progress-bar-danger" role="progressbar" title="{{'Dead' | translate}}" ng-style="{width: (task.ed2k.deadPeerCount / task.ed2k.peerCount * 100) + '%'}"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.uploadingPeerCount !== undefined || task.ed2k.waitingUploadPeerCount !== undefined">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Upload Queue</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="label label-primary" title="{{'Uploading Peers' | translate}}">
+                                <span translate>Uploading</span>: {{task.ed2k.uploadingPeerCount || 0}}
+                            </span>
+                            &nbsp;
+                            <span class="label label-default" title="{{'Waiting Peers' | translate}}">
+                                <span translate>Waiting</span>: {{task.ed2k.waitingUploadPeerCount || 0}}
+                            </span>
+                            &nbsp;
+                            <span class="label label-default" title="{{'Peer Credits' | translate}}">
+                                <span translate>Credits</span>: {{task.ed2k.peerCreditCount || 0}}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="row no-hover">
+                        <div class="col-sm-12">
+                            <h4><i class="fa fa-id-card-o fa-fw"></i> <span translate>Client Identity & Networking</span></h4>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.clientId">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Client ID</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.clientId"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.userHash">
+                        <div class="setting-key col-sm-4">
+                            <span translate>User Hash</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="allow-word-break" ng-bind="task.ed2k.userHash"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.tcpPort || task.ed2k.udpPort">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Listen Ports</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="'TCP: ' + (task.ed2k.tcpPort || '-') + ' / UDP: ' + (task.ed2k.udpPort || '-')"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.portMapping">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Port Mapping</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="label" ng-class="{'label-success': task.ed2k.portMapping === 'ok', 'label-default': task.ed2k.portMapping !== 'ok'}"
+                                  ng-bind="task.ed2k.portMapping"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.aichRoot">
+                        <div class="setting-key col-sm-4">
+                            <span translate>AICH Root Hash</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="allow-word-break" ng-bind="task.ed2k.aichRoot"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.sharingTime">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Sharing Time</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="task.ed2k.sharingTime | dateDuration: 'second': 'HH:mm:ss'"></span>
+                        </div>
+                    </div>
+                    <div class="row" ng-if="task.ed2k.corruptPartCount !== undefined">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Corrupt Parts</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span class="label" ng-class="{'label-danger': task.ed2k.corruptPartCount > 0, 'label-default': !task.ed2k.corruptPartCount || task.ed2k.corruptPartCount == '0'}"
+                                  ng-bind="task.ed2k.corruptPartCount || '0'"></span>
                         </div>
                     </div>
                 </div>

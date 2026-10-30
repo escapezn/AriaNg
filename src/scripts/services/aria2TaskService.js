@@ -57,6 +57,10 @@
                 taskName = task.bittorrent.info.name;
             }
 
+            if (!taskName && task.ed2k && task.ed2k.name) {
+                taskName = task.ed2k.name;
+            }
+
             if (!taskName && task.files && task.files.length > 0) {
                 taskName = getFileName(task.files[0]);
             }
@@ -295,6 +299,15 @@
 
             task.totalLength = parseInt(task.totalLength);
             task.completedLength = parseInt(task.completedLength);
+
+            if (task.ed2k) {
+                if (task.ed2k.length && !task.totalLength) {
+                    task.totalLength = parseInt(task.ed2k.length);
+                }
+                if (task.ed2k.completedLength && !task.completedLength) {
+                    task.completedLength = parseInt(task.ed2k.completedLength);
+                }
+            }
             task.completePercent = (task.totalLength > 0 ? task.completedLength / task.totalLength * 100 : (task.status === 'complete' ? 100 : 0));
             task.remainLength = task.totalLength - task.completedLength;
             task.remainPercent = 100 - task.completePercent;

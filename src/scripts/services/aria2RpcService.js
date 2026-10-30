@@ -336,6 +336,7 @@
                 requestParams.push('files');
                 requestParams.push('bittorrent');
                 requestParams.push('infoHash');
+                requestParams.push('ed2k');
 
                 return requestParams;
             },

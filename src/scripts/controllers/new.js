@@ -115,7 +115,8 @@
             optionFilter: {
                 global: true,
                 http: false,
-                bittorrent: false
+                bittorrent: false,
+                ed2k: false
             },
             exportCommandApiOptions: null
         };

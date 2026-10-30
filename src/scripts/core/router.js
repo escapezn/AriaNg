@@ -55,6 +55,10 @@
                 templateUrl: 'views/settings-aria2.html',
                 controller: 'Aria2SettingsController'
             })
+            .when('/settings/aria2/ed2k', {
+                templateUrl: 'views/settings-aria2.html',
+                controller: 'Aria2SettingsController'
+            })
             .when('/settings/aria2/metalink', {
                 templateUrl: 'views/settings-aria2.html',
                 controller: 'Aria2SettingsController'
