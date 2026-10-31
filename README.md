@@ -27,6 +27,28 @@ AriaNg is a modern web frontend making [aria2](https://github.com/aria2/aria2) e
 9. Exporting and Importing settings support
 10. Less bandwidth usage, only requesting incremental data
 
+## Fork Features & Enhancements
+
+This fork of AriaNg incorporates several key features and usability enhancements:
+
+1. **Automatic File Cleaning (Aria2 Cleaner)**
+    * Bundled with [`scripts/clean.sh`](scripts/clean.sh) for automatic file lifecycle management:
+        * Automatically cleans up unfinished files and dedicated subdirectories when a downloading task is removed.
+        * Automatically removes incomplete fragments on download errors.
+        * Automatically cleans up residual `.aria2` control files upon completion.
+        * Automatically deletes `.torrent` seed files when BitTorrent seeding completes or is stopped.
+    * **One-Click Auto Setup**: Run `./clean.sh --install` in your `aria2.conf` directory to auto-detect RPC credentials and configure hooks automatically. See [Documentation](docs/aria2-cleaner.md).
+2. **Seeding & Upload Statistics Enhancement**
+    * Displays real-time upload speed, total uploaded length, and share ratio for seeding tasks.
+    * Clearer upload volume labels in the task list for enhanced readability.
+3. **ED2K & aria2-next Support**
+    * Supports ED2K download links and integrates with [aria2-next](https://github.com/aria2-next).
+    * Provides ED2K server lists, KAD network node status, and peer statistics.
+4. **HTTPS / Mixed Content Protocol Flexibility**
+    * Allows connecting to plain HTTP and WS RPC endpoints even when AriaNg is hosted over HTTPS.
+5. **Multi-RPC Independent Download Path Histories**
+    * Retains dedicated download path histories for each RPC server configuration.
+
 ## Screenshots
 #### Desktop
 ![AriaNg](https://raw.githubusercontent.com/mayswind/AriaNg-WebSite/master/screenshots/desktop.png)
