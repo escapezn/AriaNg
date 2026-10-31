@@ -555,6 +555,18 @@
                         </div>
                     </div>
 
+                    <div class="row" ng-if="task.uploadLength !== undefined || task.uploadSpeed !== undefined">
+                        <div class="setting-key col-sm-4">
+                            <span translate>Upload</span>
+                        </div>
+                        <div class="setting-value col-sm-8">
+                            <span ng-bind="(task.uploadLength | readableVolume) + (task.status === 'active' ? ' @ ' + (task.uploadSpeed | readableVolume) + '/s' : '')"></span>
+                            <span ng-if="task.shareRatio > 0">
+                                &nbsp;(<span translate>Share Ratio</span>: <span ng-bind="task.shareRatio | number: 2"></span>)
+                            </span>
+                        </div>
+                    </div>
+
                     <div class="row no-hover">
                         <div class="col-sm-12">
                             <h4><i class="fa fa-id-card-o fa-fw"></i> <span translate>Client Identity & Networking</span></h4>

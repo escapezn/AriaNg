@@ -319,6 +319,7 @@
                     'gid',
                     'totalLength',
                     'completedLength',
+                    'uploadLength',
                     'uploadSpeed',
                     'downloadSpeed',
                     'connections',
