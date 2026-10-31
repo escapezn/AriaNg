@@ -17,63 +17,67 @@
   当 BT 任务下载达到 100% 仍在做种（seeding）期间，脚本不会强行删除相关种子元数据，待做种结束或用户手动移除时才执行清理，避免打断做种。
 - **多文件与目录安全防护**：
   对于包含独立子目录的多文件 BT 任务，仅清理该任务专属的子目录，绝不会向上越级误删共享根下载目录（如 `/downloads`）。
+- **同目录智能感知**：
+  脚本与 `aria2.conf` 处于同一目录时，**自动读取并适配** `rpc-listen-port` 和 `rpc-secret`，无需手动在脚本内写死密钥。
 - **三级依赖容错解析**：
   脚本优先使用 `jq` 解析 JSON-RPC 响应；若宿主机未安装 `jq`，自动回退至 `python3/python`；若无 Python 则回退至原生 POSIX 正则，完美适配极简 Docker 容器、Alpine Linux 及嵌入式 NAS 环境。
 
 ---
 
-## 部署指南
+## 推荐方式：一键全自动配置（脚本与 aria2.conf 同目录）
 
-### 1. 放置脚本并赋予执行权限
-
-将 `scripts/clean.sh` 放置在运行 `aria2c` 的主机或容器内（例如 `/etc/aria2/clean.sh`）：
+将 `scripts/clean.sh` 复制到 `aria2.conf` 所在目录（例如 `/etc/aria2/`）：
 
 ```bash
-cp scripts/clean.sh /etc/aria2/clean.sh
-chmod +x /etc/aria2/clean.sh
+# 1. 复制脚本至 aria2 配置文件同级目录
+cp scripts/clean.sh /etc/aria2/
+
+# 2. 进入目录并执行一键安装
+cd /etc/aria2/
+chmod +x clean.sh
+./clean.sh --install
+```
+
+### `--install` 做了什么？
+1. **自动备份**：自动创建 `aria2.conf.bak` 备份文件；
+2. **自动注入 Hooks**：在 `aria2.conf` 中追加或更新 `on-download-stop`、`on-download-error`、`on-download-complete` 指向绝对路径；
+3. **自动感知环境**：自动读取现有的 `rpc-listen-port` 及 `rpc-secret`，免去任何手动配置；
+4. 提示重启 `aria2c`。
+
+> 如需卸载还原，只需在同目录下执行：`./clean.sh --uninstall` 即可移除注入的配置。
+
+---
+
+## 手动配置指南（跨目录部署）
+
+若脚本与 `aria2.conf` 分离存放，也可以手动引用：
+
+### 1. 赋予执行权限
+```bash
+chmod +x /path/to/scripts/clean.sh
 ```
 
 ### 2. 配置环境变量（可选）
-
-打开脚本或通过环境变量配置你的 Aria2 RPC 连接信息（默认适用于本机免密或默认端口）：
-
+如果使用非默认端口或设置了 RPC 密钥，可通过环境变量或在脚本头部配置：
 ```bash
-# Aria2 JSON-RPC 接口地址（默认为本地 6800 端口）
 ARIA2_RPC_URL="http://127.0.0.1:6800/jsonrpc"
-
-# Aria2 RPC 密钥令牌（若在 aria2.conf 中设置了 rpc-secret，请填在此处）
 ARIA2_RPC_SECRET="your_secret_token_here"
-
-# 调试日志开关（排查问题时可设为 true）
-ENABLE_LOG="false"
-LOG_FILE="/tmp/aria2_clean.log"
 ```
 
-### 3. 在 `aria2.conf` 中添加事件钩子
-
-在你的 `aria2.conf` 配置文件中添加以下配置项：
-
+### 3. 在 `aria2.conf` 中手动添加钩子
 ```ini
-# 任务停止时执行（处理删除正在下载任务、做种结束清理）
-on-download-stop=/etc/aria2/clean.sh
-
-# 下载出错时执行（处理错误未完成文件清理）
-on-download-error=/etc/aria2/clean.sh
-
-# 普通下载完成时执行（清理残留 .aria2 文件）
-on-download-complete=/etc/aria2/clean.sh
-
-# （可选）BT下载完成时执行
-# on-bt-download-complete=/etc/aria2/clean.sh
+on-download-stop=/path/to/scripts/clean.sh
+on-download-error=/path/to/scripts/clean.sh
+on-download-complete=/path/to/scripts/clean.sh
 ```
 
-保存配置文件后，**重启 `aria2c` 守护进程**即可生效。
+保存后重启 `aria2c` 即可。
 
 ---
 
 ## Docker 容器部署示例
 
-若您的 Aria2 运行在 Docker 容器中（例如 `p3terx/aria2-pro` 或其他标准镜像），可通过 Volume 挂载引入脚本：
+若您的 Aria2 运行在 Docker 容器中（例如 `p3terx/aria2-pro` 或其他标准镜像），可通过 Volume 挂载引入脚本并自动安装：
 
 ```yaml
 version: "3.8"
@@ -83,19 +87,16 @@ services:
     container_name: aria2
     environment:
       - RPC_SECRET=your_token
-      - ARIA2_RPC_SECRET=your_token
     volumes:
       - /path/to/aria2/config:/config
       - /path/to/downloads:/downloads
-      - /path/to/scripts/clean.sh:/config/clean.sh:ro
+      - /path/to/scripts/clean.sh:/config/clean.sh
     restart: unless-stopped
 ```
 
-在容器的 `aria2.conf` 中引用：
-```ini
-on-download-stop=/config/clean.sh
-on-download-error=/config/clean.sh
-on-download-complete=/config/clean.sh
+在容器宿主机或容器内直接运行：
+```bash
+docker exec -it aria2 /config/clean.sh --install
 ```
 
 ---
@@ -118,6 +119,6 @@ on-download-complete=/config/clean.sh
 1. **为什么在 AriaNg 中暂停任务后，文件没有被删？**
    - 这是特意设计的安全机制。脚本识别到任务状态为 `paused`，会立即跳过清理，以保障断点续传能力。
 2. **执行后没有删除文件？**
-   - 检查脚本是否有执行权限：`chmod +x /etc/aria2/clean.sh`；
-   - 检查 `aria2.conf` 中的 `rpc-secret` 是否与脚本内的 `ARIA2_RPC_SECRET` 一致；
+   - 检查脚本是否有执行权限：`chmod +x clean.sh`；
+   - 检查 `aria2.conf` 中的 `rpc-secret` 是否与脚本读取到的密钥一致；
    - 将 `ENABLE_LOG="true"` 打开，观察 `/tmp/aria2_clean.log` 的执行日志以定位原因。

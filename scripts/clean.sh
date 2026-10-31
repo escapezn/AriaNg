@@ -3,19 +3,42 @@
 # Aria2 Automatic File Cleaner Script
 # Supported Events: on-download-stop, on-download-error, on-download-complete, on-bt-download-complete
 #
-# Aria2 passes 3 arguments to hook scripts:
-# $1: GID
-# $2: Number of files
-# $3: Path to the first file
+# Usage:
+#   1. Automatic Installation (when placed in the same directory as aria2.conf):
+#      ./clean.sh --install
+#
+#   2. Event Hook Call (invoked automatically by aria2c):
+#      $1: GID
+#      $2: Number of files
+#      $3: Path to the first file
 #
 
 set -e
 
-# ================= Configuration =================
-# Aria2 JSON-RPC endpoint (default: http://127.0.0.1:6800/jsonrpc)
-ARIA2_RPC_URL="${ARIA2_RPC_URL:-http://127.0.0.1:6800/jsonrpc}"
+# Resolve script path and directory
+SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+CONF_FILE="${SCRIPT_DIR}/aria2.conf"
 
-# Aria2 RPC secret token (leave empty if not configured)
+# ================= Configuration & Auto-Detection =================
+# If placed in the same directory as aria2.conf, automatically parse configuration
+if [ -f "$CONF_FILE" ]; then
+    if [ -z "$ARIA2_RPC_SECRET" ]; then
+        CONF_SECRET=$(grep -E '^[[:space:]]*rpc-secret[[:space:]]*=' "$CONF_FILE" 2>/dev/null | tail -n 1 | cut -d'=' -f2- | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//') || true
+        if [ -n "$CONF_SECRET" ]; then
+            ARIA2_RPC_SECRET="$CONF_SECRET"
+        fi
+    fi
+
+    if [ -z "$ARIA2_RPC_URL" ]; then
+        CONF_PORT=$(grep -E '^[[:space:]]*rpc-listen-port[[:space:]]*=' "$CONF_FILE" 2>/dev/null | tail -n 1 | cut -d'=' -f2- | tr -d '\r' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//') || true
+        CONF_PORT="${CONF_PORT:-6800}"
+        ARIA2_RPC_URL="http://127.0.0.1:${CONF_PORT}/jsonrpc"
+    fi
+fi
+
+# Fallback default values
+ARIA2_RPC_URL="${ARIA2_RPC_URL:-http://127.0.0.1:6800/jsonrpc}"
 ARIA2_RPC_SECRET="${ARIA2_RPC_SECRET:-}"
 
 # Logging configuration (set ENABLE_LOG=true to debug)
@@ -27,7 +50,96 @@ DELETE_ON_ERROR="${DELETE_ON_ERROR:-true}"
 DELETE_ON_REMOVE="${DELETE_ON_REMOVE:-true}"
 DELETE_CONTROL_FILE="${DELETE_CONTROL_FILE:-true}"
 DELETE_TORRENT_FILE="${DELETE_TORRENT_FILE:-true}"
-# =================================================
+# ==================================================================
+
+# ----------------- CLI Management Commands -----------------
+install_hooks() {
+    echo "=========================================="
+    echo "  Aria2 Cleaner Automatic Installation    "
+    echo "=========================================="
+
+    if [ ! -f "$CONF_FILE" ]; then
+        echo "Error: aria2.conf not found in the script directory (${SCRIPT_DIR})."
+        echo "Please make sure clean.sh and aria2.conf are placed in the same folder."
+        exit 1
+    fi
+
+    # Make self executable
+    chmod +x "$SCRIPT_PATH" 2>/dev/null || true
+
+    # Backup original configuration
+    cp "$CONF_FILE" "${CONF_FILE}.bak"
+    echo "Created backup: ${CONF_FILE}.bak"
+
+    # Remove previous hook configurations to prevent duplicates
+    TMP_CONF="${CONF_FILE}.tmp"
+    grep -v -E '^[[:space:]]*on-download-(stop|error|complete)[[:space:]]*=' "$CONF_FILE" > "$TMP_CONF" 2>/dev/null || cat "$CONF_FILE" > "$TMP_CONF"
+
+    # Append new cleaner hooks
+    cat <<EOF >> "$TMP_CONF"
+
+# === Aria2 Cleaner Hooks ===
+on-download-stop=${SCRIPT_PATH}
+on-download-error=${SCRIPT_PATH}
+on-download-complete=${SCRIPT_PATH}
+EOF
+
+    mv "$TMP_CONF" "$CONF_FILE"
+    echo "Updated ${CONF_FILE} with cleaner hooks."
+
+    # Print auto-detected settings
+    echo "Auto-detected settings:"
+    echo "  RPC URL: ${ARIA2_RPC_URL}"
+    if [ -n "$ARIA2_RPC_SECRET" ]; then
+        echo "  RPC Secret: [Configured]"
+    else
+        echo "  RPC Secret: [None]"
+    fi
+
+    echo "=========================================="
+    echo "Installation completed successfully!"
+    echo "Please restart aria2c to apply changes."
+    echo "=========================================="
+    exit 0
+}
+
+uninstall_hooks() {
+    echo "=========================================="
+    echo "  Aria2 Cleaner Uninstallation            "
+    echo "=========================================="
+
+    if [ ! -f "$CONF_FILE" ]; then
+        echo "Error: aria2.conf not found in ${SCRIPT_DIR}."
+        exit 1
+    fi
+
+    TMP_CONF="${CONF_FILE}.tmp"
+    grep -v -E '^[[:space:]]*on-download-(stop|error|complete)[[:space:]]*=' "$CONF_FILE" | grep -v '# === Aria2 Cleaner Hooks ===' > "$TMP_CONF" 2>/dev/null || cat "$CONF_FILE" > "$TMP_CONF"
+
+    mv "$TMP_CONF" "$CONF_FILE"
+    echo "Removed cleaner hooks from ${CONF_FILE}."
+    echo "Please restart aria2c to apply changes."
+    echo "=========================================="
+    exit 0
+}
+
+case "$1" in
+    "--install"|"install"|"-i")
+        install_hooks
+        ;;
+    "--uninstall"|"uninstall"|"-u")
+        uninstall_hooks
+        ;;
+    "--help"|"-h")
+        echo "Usage: $0 [OPTION] | [GID] [FILE_COUNT] [FIRST_FILE_PATH]"
+        echo "Options:"
+        echo "  --install, -i    Auto-configure aria2.conf in the same directory"
+        echo "  --uninstall, -u  Remove cleaner hooks from aria2.conf"
+        echo "  --help, -h       Display this help message"
+        exit 0
+        ;;
+esac
+# -----------------------------------------------------------
 
 GID="$1"
 FILE_NUM="$2"
